@@ -9,14 +9,40 @@
     <h1>Procesador de PDF</h1>
     <input type="file" id="archivo_pdf" accept=".pdf" required>
     <button onclick="procesarPDF()">Procesar PDF</button>
-
+    <br>
+    <label for="cadena_input">Tamaño en MB máximo del fichero de salida:</label>
+    <input type="text" id="cadena_input" value="15">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.16.0/pdf-lib.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.1.5/jszip.min.js"></script>
     <script>
+
+        function formatearNumeroConTresDigitos(numero,digitos) {            
+            return String(numero).padStart(digitos, '0');
+        }
+
+        async function unificarPDF(archivosEntrada, archivoSalida) {
+            const pdfDoc = await PDFDocument.create();
+
+            for (const archivo of archivosEntrada) {
+                const pdfBytes = fs.readFileSync(archivo);
+                const pdf = await PDFDocument.load(pdfBytes);
+                const paginas = await pdf.copyPages(pdf, pdf.getPageIndices());
+
+                for (const pagina of paginas) {
+                    pdfDoc.addPage(pagina);
+                }
+            }
+
+            const pdfBytesSalida = await pdfDoc.save();
+            fs.writeFileSync(archivoSalida, pdfBytesSalida);
+        }
+
         async function procesarPDF() {
+            const cadenaInput = document.getElementById('cadena_input');
+            const tamanhoMaximoPDF = cadenaInput.value * 1024*1024*0.8;
             const archivoPdfInput = document.getElementById('archivo_pdf');
             const archivoPdf = archivoPdfInput.files[0];
-
+            const pdfName = archivoPdf.name.replace(".pdf","");
             if (!archivoPdf) {
                 alert('Selecciona un archivo PDF.');
                 return;
@@ -25,16 +51,34 @@
             const pdfData = await archivoPdf.arrayBuffer();
             const pdfDoc = await PDFLib.PDFDocument.load(pdfData);
             const zip = new JSZip();
-
+            let tamanhoActual = 0;
+            let secuencia = 1;
+            let pdfWriter = await PDFLib.PDFDocument.create();
+            let pageData = undefined;
+            let pageCount = 0;
             for (let pageNumber = 0; pageNumber < pdfDoc.getPageCount(); pageNumber++) {
-                const pdfWriter = await PDFLib.PDFDocument.create();
+                
                 const [copiedPage] = await pdfWriter.copyPages(pdfDoc, [pageNumber]);
+                
                 pdfWriter.addPage(copiedPage);
+                pageCount +=1;
 
-                const pageData = await pdfWriter.save();
-                zip.file(`pagina${pageNumber + 1}.pdf`, pageData);
+                pageData = await pdfWriter.save();
+                const tamanhoPagina = pageData.byteLength;
+                let tamanhoActualInt = parseInt(tamanhoActual);
+                let tamanhoPaginaInt = parseInt(tamanhoPagina);
+                let tamanhoCalculado = tamanhoActualInt+tamanhoPaginaInt;
+                if(tamanhoPagina>tamanhoMaximoPDF){
+                    const numberFormated = formatearNumeroConTresDigitos(secuencia,2);
+                    zip.file(pdfName+"_"+numberFormated+`.pdf`, pageData);
+                    pdfWriter = await PDFLib.PDFDocument.create();  
+                    secuencia+=1;
+                    pageCount = 0;
+                }
+                
             }
-
+            const numberFormated = formatearNumeroConTresDigitos(secuencia,2);
+            zip.file(pdfName+"_"+numberFormated+`.pdf`, pageData);
             zip.generateAsync({ type: 'blob' })
                 .then((blob) => {
                     const url = window.URL.createObjectURL(blob);
