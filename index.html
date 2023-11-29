@@ -11,11 +11,14 @@
     <button onclick="ejecutarScript()">Ejecutar Script</button>
     <p id="resultado"></p>
 
+    <!-- Agrega esta línea para cargar tu nuevo script -->
+    <script src="script.js"></script>
+
     <script>
-        function ejecutarScript() {
-            fetch('/').then(response => response.text()).then(data => {
-                document.getElementById('resultado').innerText = data;
-            });
+        // Llama a la función principal desde tu nuevo script
+        async function ejecutarScript() {
+            await main();  // Suponiendo que la función principal se llama 'main' en tu script.js
+            document.getElementById('resultado').innerText = "¡Script ejecutado con éxito!";
         }
     </script>
 </body>
