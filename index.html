@@ -1,24 +1,50 @@
-<!-- index.html -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Frontend Web</title>
+    <title>Procesador de PDF</title>
 </head>
 <body>
-    <button onclick="ejecutarScript()">Ejecutar Script</button>
-    <p id="resultado"></p>
+    <h1>Procesador de PDF</h1>
+    <input type="file" id="archivo_pdf" accept=".pdf" required>
+    <button onclick="procesarPDF()">Procesar PDF</button>
 
-    <!-- Agrega esta línea para cargar tu nuevo script -->
-    <script src="script.js"></script>
-
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.16.0/pdf-lib.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.1.5/jszip.min.js"></script>
     <script>
-        // Llama a la función principal desde tu nuevo script
-        async function ejecutarScript() {
-            await main();  // Suponiendo que la función principal se llama 'main' en tu script.js
-            document.getElementById('resultado').innerText = "¡Script ejecutado con éxito!";
+        async function procesarPDF() {
+            const archivoPdfInput = document.getElementById('archivo_pdf');
+            const archivoPdf = archivoPdfInput.files[0];
+
+            if (!archivoPdf) {
+                alert('Selecciona un archivo PDF.');
+                return;
+            }
+
+            const pdfData = await archivoPdf.arrayBuffer();
+            const pdfDoc = await PDFLib.PDFDocument.load(pdfData);
+            const zip = new JSZip();
+
+            for (let pageNumber = 0; pageNumber < pdfDoc.getPageCount(); pageNumber++) {
+                const pdfWriter = await PDFLib.PDFDocument.create();
+                const [copiedPage] = await pdfWriter.copyPages(pdfDoc, [pageNumber]);
+                pdfWriter.addPage(copiedPage);
+
+                const pageData = await pdfWriter.save();
+                zip.file(`pagina${pageNumber + 1}.pdf`, pageData);
+            }
+
+            zip.generateAsync({ type: 'blob' })
+                .then((blob) => {
+                    const url = window.URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = 'output.zip';
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                });
         }
     </script>
 </body>
