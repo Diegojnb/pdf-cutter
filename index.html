@@ -39,7 +39,7 @@
 
         async function procesarPDF() {
             const cadenaInput = document.getElementById('cadena_input');
-            const tamanhoMaximoPDF = cadenaInput.value * 1024*1024*0.8;
+            const tamanhoMaximoPDF = cadenaInput.value * 1024*1024;
             const archivoPdfInput = document.getElementById('archivo_pdf');
             const archivoPdf = archivoPdfInput.files[0];
             const pdfName = archivoPdf.name.replace(".pdf","");
@@ -68,7 +68,7 @@
                 let tamanhoActualInt = parseInt(tamanhoActual);
                 let tamanhoPaginaInt = parseInt(tamanhoPagina);
                 let tamanhoCalculado = tamanhoActualInt+tamanhoPaginaInt;
-                if(tamanhoPagina>tamanhoMaximoPDF){
+                if(tamanhoPagina>tamanhoMaximoPDF || pageNumber+1==pdfDoc.getPageCount()){
                     const numberFormated = formatearNumeroConTresDigitos(secuencia,2);
                     zip.file(pdfName+"_"+numberFormated+`.pdf`, pageData);
                     pdfWriter = await PDFLib.PDFDocument.create();  
@@ -77,8 +77,6 @@
                 }
                 
             }
-            const numberFormated = formatearNumeroConTresDigitos(secuencia,2);
-            zip.file(pdfName+"_"+numberFormated+`.pdf`, pageData);
             zip.generateAsync({ type: 'blob' })
                 .then((blob) => {
                     const url = window.URL.createObjectURL(blob);
